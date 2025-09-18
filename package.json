@@ -10,7 +10,6 @@
     "create-sample": "node create-sample-data.js",
     "db:setup": "node -e \"require('./src/config/database').initDatabase().then(() => process.exit(0)).catch(err => { console.error(err); process.exit(1); })\"",
     "db:reset": "node -e \"require('./src/config/database').resetDatabase().then(() => process.exit(0)).catch(err => { console.error(err); process.exit(1); })\"",
-    "postinstall": "npm run db:setup",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

@@ -1,6 +1,8 @@
 # Azure Deployment Guide for AutoAssist Backend
 
-This guide will help you deploy your AutoAssist backend to Azure App Service with Azure Database for PostgreSQL.
+This guide documents the deployment process for AutoAssist backend to Azure App Service with Azure Database for PostgreSQL.
+
+**Status**: ✅ Successfully Deployed
 
 ## Prerequisites
 
