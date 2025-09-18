@@ -1,0 +1,61 @@
+name: Deploy to Azure App Service
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: autoassist-backend
+  AZURE_WEBAPP_PACKAGE_PATH: "."
+  NODE_VERSION: "18.x"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: npm install
+        run: npm ci
+
+      - name: Build application
+        run: |
+          # Add any build steps here if needed
+          echo "Build completed"
+
+      - name: Zip application
+        run: |
+          zip -r autoassist-backend.zip . -x "node_modules/*" ".git/*" "*.md" "data/*" "test-setup.sh" "setup.sh"
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
+          package: autoassist-backend.zip
+
+      - name: Run database migrations
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
+          app-settings-json: |
+            [
+              {
+                "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
+                "value": "true"
+              }
+            ]
+
+      - name: Health check
+        run: |
+          sleep 30
+          curl -f https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/health || exit 1
