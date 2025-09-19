@@ -59,6 +59,11 @@ app.get("/health", (req, res) => {
   });
 });
 
+// Handle favicon.ico requests (prevents 404 errors in browser)
+app.get("/favicon.ico", (req, res) => {
+  res.status(204).end(); // No content
+});
+
 // API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/cars", carRoutes);

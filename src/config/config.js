@@ -2,13 +2,13 @@
 require("dotenv").config();
 
 const config = {
-  port: process.env.PORT || 5000,
+  port: process.env.PORT || 8000,
   nodeEnv: process.env.NODE_ENV || "development",
 
   database: {
     url: process.env.DATABASE_URL || process.env.MONGO_URI,
     mongoURI: process.env.MONGO_URI || process.env.DATABASE_URL,
-    name: process.env.DB_NAME || "autoassist_db",
+    name: process.env.DB_NAME || "autoassist",
   },
 
   jwt: {
