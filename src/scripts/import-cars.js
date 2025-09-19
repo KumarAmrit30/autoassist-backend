@@ -283,8 +283,7 @@ const importCarData = async (filePath) => {
 
     // Clear existing data (optional - remove this if you want to keep existing data)
     console.log("Clearing existing car data...");
-    const { pool } = require("../config/database");
-    await pool.query("DELETE FROM cars");
+    await Car.deleteMany({});
 
     // Bulk insert data
     console.log("Inserting car data into database...");

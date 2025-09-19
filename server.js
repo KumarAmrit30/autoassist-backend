@@ -3,7 +3,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const config = require("./src/config/config");
-const { initDatabase } = require("./src/config/database");
+const { initDatabase, closeDatabase } = require("./src/config/database");
 const { errorHandler, notFound } = require("./src/middleware/auth");
 
 // Import routes
@@ -118,13 +118,15 @@ process.on("unhandledRejection", (err) => {
 });
 
 // Graceful shutdown
-process.on("SIGTERM", () => {
+process.on("SIGTERM", async () => {
   console.log("SIGTERM received. Shutting down gracefully...");
+  await closeDatabase();
   process.exit(0);
 });
 
-process.on("SIGINT", () => {
+process.on("SIGINT", async () => {
   console.log("SIGINT received. Shutting down gracefully...");
+  await closeDatabase();
   process.exit(0);
 });
 

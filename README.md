@@ -1,6 +1,10 @@
 # AutoAssist Backend API
 
-A comprehensive backend API for AutoAssist Car Marketplace built with Node.js, Express.js, and PostgreSQL.
+A comprehensive backend API for AutoAssist Car Marketplace built with Node.js, Express.js, and MongoDB Atlas.
+
+## 🚨 **MIGRATED TO MONGODB ATLAS**
+
+This application has been fully migrated from PostgreSQL to MongoDB Atlas. See [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) for detailed migration information.
 
 ## 🚀 Features
 
@@ -16,7 +20,7 @@ A comprehensive backend API for AutoAssist Car Marketplace built with Node.js, E
 ## 📋 Prerequisites
 
 - Node.js (>= 14.0.0)
-- PostgreSQL (>= 12.0)
+- MongoDB Atlas account (recommended) or local MongoDB (>= 6.0)
 - npm or yarn
 
 ## 🛠️ Installation
@@ -40,24 +44,30 @@ A comprehensive backend API for AutoAssist Car Marketplace built with Node.js, E
    cp env.example .env
    ```
 
-   Edit `.env` file with your configuration:
+   Edit `.env` file with your MongoDB Atlas configuration:
 
    ```env
    PORT=5000
    NODE_ENV=development
-   DATABASE_URL=postgresql://username:password@localhost:5432/autoassist_db
+   DATABASE_URL=mongodb+srv://username:password@cluster0.mongodb.net/autoassist_db?retryWrites=true&w=majority
+   MONGO_URI=mongodb+srv://username:password@cluster0.mongodb.net/autoassist_db?retryWrites=true&w=majority
+   DB_NAME=autoassist_db
    JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
    JWT_EXPIRE_TIME=7d
    FRONTEND_URL=http://localhost:3000
    ```
 
-4. **Set up PostgreSQL database**
+4. **Set up MongoDB Atlas**
+
+   1. Create a MongoDB Atlas account at https://cloud.mongodb.com
+   2. Create a new cluster
+   3. Create a database user
+   4. Get your connection string
+   5. Whitelist your IP address
+   6. Replace the `DATABASE_URL` in your `.env` file
 
    ```bash
-   # Create database
-   createdb autoassist_db
-
-   # Initialize database tables
+   # Initialize database connection (optional - auto-connects on startup)
    npm run db:setup
    ```
 
@@ -266,44 +276,50 @@ GET /api/cars/filters
 GET /health
 ```
 
-## 🗄️ Database Schema
+## 🗄️ Database Schema (MongoDB)
 
-### Users Table
+### Users Collection
 
-```sql
-CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  username VARCHAR(50) UNIQUE NOT NULL,
-  email VARCHAR(100) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+```javascript
+{
+  _id: ObjectId,           // Auto-generated MongoDB ID
+  username: String,        // Unique, 3-50 characters
+  email: String,          // Unique, validated email format
+  password_hash: String,   // Bcrypt hashed password
+  created_at: Date,       // Auto timestamp
+  updated_at: Date        // Auto timestamp
+}
 ```
 
-### Cars Table
+### Cars Collection
 
-```sql
-CREATE TABLE cars (
-  id SERIAL PRIMARY KEY,
-  brand VARCHAR(100) NOT NULL,
-  model VARCHAR(100) NOT NULL,
-  variant VARCHAR(200),
-  year INTEGER NOT NULL,
-  price DECIMAL(12,2) NOT NULL,
-  fuel_type VARCHAR(50),
-  transmission VARCHAR(50),
-  mileage VARCHAR(50),
-  engine_cc VARCHAR(50),
-  power_bhp VARCHAR(50),
-  seats INTEGER,
-  body_type VARCHAR(50),
-  image_url VARCHAR(500),
-  description TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+```javascript
+{
+  _id: ObjectId,          // Auto-generated MongoDB ID (exposed as 'id' in API)
+  brand: String,          // Required, max 100 characters
+  model: String,          // Required, max 100 characters
+  variant: String,        // Optional, max 200 characters
+  year: Number,           // Required, 1900 to current year + 1
+  price: Number,          // Required, positive number
+  fuel_type: String,      // Optional, max 50 characters
+  transmission: String,   // Optional, max 50 characters
+  mileage: String,        // Optional, max 50 characters
+  engine_cc: String,      // Optional, max 50 characters
+  power_bhp: String,      // Optional, max 50 characters
+  seats: Number,          // Optional, 1-50
+  body_type: String,      // Optional, max 50 characters
+  image_url: String,      // Optional, max 500 characters
+  description: String,    // Optional, unlimited length
+  created_at: Date,       // Auto timestamp
+  updated_at: Date        // Auto timestamp
+}
 ```
+
+### Indexes
+
+- **Users**: `email` (unique), `username` (unique)
+- **Cars**: `brand`, `price`, `year`, `fuel_type`, `transmission`, `body_type`
+- **Text Search**: `brand`, `model`, `variant` (for search functionality)
 
 ## 🛠️ Available Scripts
 
@@ -321,7 +337,7 @@ autoassist_backend/
 ├── src/
 │   ├── config/          # Database and app configuration
 │   │   ├── config.js    # Environment configuration
-│   │   └── database.js  # PostgreSQL connection and setup
+│   │   └── database.js  # MongoDB connection and setup
 │   ├── controllers/    # Route controllers
 │   │   ├── authController.js
 │   │   └── carController.js
@@ -371,7 +387,7 @@ The script will:
 - Read the Excel file
 - Clean and validate the data
 - Map columns to database fields
-- Bulk insert into PostgreSQL
+- Bulk insert into MongoDB
 
 **Expected Excel Format:**
 
@@ -435,14 +451,14 @@ All API responses follow a consistent format:
 
 ## 🔧 Environment Variables
 
-| Variable          | Description                  | Default               |
-| ----------------- | ---------------------------- | --------------------- |
-| `PORT`            | Server port                  | 5000                  |
-| `NODE_ENV`        | Environment                  | development           |
-| `DATABASE_URL`    | PostgreSQL connection string | -                     |
-| `JWT_SECRET`      | JWT secret key               | -                     |
-| `JWT_EXPIRE_TIME` | Token expiry time            | 7d                    |
-| `FRONTEND_URL`    | Frontend URL for CORS        | http://localhost:3000 |
+| Variable          | Description                     | Default               |
+| ----------------- | ------------------------------- | --------------------- |
+| `PORT`            | Server port                     | 5000                  |
+| `NODE_ENV`        | Environment                     | development           |
+| `DATABASE_URL`    | MongoDB Atlas connection string | -                     |
+| `JWT_SECRET`      | JWT secret key                  | -                     |
+| `JWT_EXPIRE_TIME` | Token expiry time               | 7d                    |
+| `FRONTEND_URL`    | Frontend URL for CORS           | http://localhost:3000 |
 
 ## 🤝 Contributing
 

@@ -1,340 +1,237 @@
-const { pool } = require("../config/database");
+const mongoose = require("mongoose");
 
-class Car {
-  constructor(data) {
-    this.id = data.id;
-    this.brand = data.brand;
-    this.model = data.model;
-    this.variant = data.variant;
-    this.year = data.year;
-    this.price = data.price;
-    this.fuel_type = data.fuel_type;
-    this.transmission = data.transmission;
-    this.mileage = data.mileage;
-    this.engine_cc = data.engine_cc;
-    this.power_bhp = data.power_bhp;
-    this.seats = data.seats;
-    this.body_type = data.body_type;
-    this.image_url = data.image_url;
-    this.description = data.description;
-    this.created_at = data.created_at;
-    this.updated_at = data.updated_at;
-  }
-
-  // Create a new car
-  static async create(carData) {
-    const {
-      brand,
-      model,
-      variant,
-      year,
-      price,
-      fuel_type,
-      transmission,
-      mileage,
-      engine_cc,
-      power_bhp,
-      seats,
-      body_type,
-      image_url,
-      description,
-    } = carData;
-
-    const query = `
-      INSERT INTO cars (
-        brand, model, variant, year, price, fuel_type, transmission,
-        mileage, engine_cc, power_bhp, seats, body_type, image_url, description
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      RETURNING *
-    `;
-
-    const values = [
-      brand,
-      model,
-      variant,
-      year,
-      price,
-      fuel_type,
-      transmission,
-      mileage,
-      engine_cc,
-      power_bhp,
-      seats,
-      body_type,
-      image_url,
-      description,
-    ];
-
-    const result = await pool.query(query, values);
-    return new Car(result.rows[0]);
-  }
-
-  // Get all cars with filtering, sorting, and pagination
-  static async findAll(options = {}) {
-    const {
-      page = 1,
-      limit = 10,
-      brand,
-      price_min,
-      price_max,
-      year,
-      fuel_type,
-      transmission,
-      body_type,
-      search,
-      sort_by = "created_at",
-      sort_order = "DESC",
-    } = options;
-
-    let query = "SELECT * FROM cars WHERE 1=1";
-    const values = [];
-    let paramCount = 0;
-
-    // Add filters
-    if (brand) {
-      paramCount++;
-      query += ` AND brand ILIKE $${paramCount}`;
-      values.push(`%${brand}%`);
-    }
-
-    if (price_min) {
-      paramCount++;
-      query += ` AND price >= $${paramCount}`;
-      values.push(price_min);
-    }
-
-    if (price_max) {
-      paramCount++;
-      query += ` AND price <= $${paramCount}`;
-      values.push(price_max);
-    }
-
-    if (year) {
-      paramCount++;
-      query += ` AND year = $${paramCount}`;
-      values.push(year);
-    }
-
-    if (fuel_type) {
-      paramCount++;
-      query += ` AND fuel_type ILIKE $${paramCount}`;
-      values.push(`%${fuel_type}%`);
-    }
-
-    if (transmission) {
-      paramCount++;
-      query += ` AND transmission ILIKE $${paramCount}`;
-      values.push(`%${transmission}%`);
-    }
-
-    if (body_type) {
-      paramCount++;
-      query += ` AND body_type ILIKE $${paramCount}`;
-      values.push(`%${body_type}%`);
-    }
-
-    if (search) {
-      paramCount++;
-      query += ` AND (brand ILIKE $${paramCount} OR model ILIKE $${paramCount} OR variant ILIKE $${paramCount})`;
-      values.push(`%${search}%`);
-    }
-
-    // Add sorting
-    const validSortFields = ["price", "year", "brand", "model", "created_at"];
-    const validSortOrders = ["ASC", "DESC"];
-
-    const sortField = validSortFields.includes(sort_by)
-      ? sort_by
-      : "created_at";
-    const sortOrder = validSortOrders.includes(sort_order.toUpperCase())
-      ? sort_order.toUpperCase()
-      : "DESC";
-
-    query += ` ORDER BY ${sortField} ${sortOrder}`;
-
-    // Add pagination
-    const offset = (page - 1) * limit;
-    paramCount++;
-    query += ` LIMIT $${paramCount}`;
-    values.push(limit);
-
-    paramCount++;
-    query += ` OFFSET $${paramCount}`;
-    values.push(offset);
-
-    const result = await pool.query(query, values);
-    const cars = result.rows.map((row) => new Car(row));
-
-    // Get total count for pagination
-    let countQuery = "SELECT COUNT(*) FROM cars WHERE 1=1";
-    const countValues = [];
-    let countParamCount = 0;
-
-    // Apply same filters for count
-    if (brand) {
-      countParamCount++;
-      countQuery += ` AND brand ILIKE $${countParamCount}`;
-      countValues.push(`%${brand}%`);
-    }
-
-    if (price_min) {
-      countParamCount++;
-      countQuery += ` AND price >= $${countParamCount}`;
-      countValues.push(price_min);
-    }
-
-    if (price_max) {
-      countParamCount++;
-      countQuery += ` AND price <= $${countParamCount}`;
-      countValues.push(price_max);
-    }
-
-    if (year) {
-      countParamCount++;
-      countQuery += ` AND year = $${countParamCount}`;
-      countValues.push(year);
-    }
-
-    if (fuel_type) {
-      countParamCount++;
-      countQuery += ` AND fuel_type ILIKE $${countParamCount}`;
-      countValues.push(`%${fuel_type}%`);
-    }
-
-    if (transmission) {
-      countParamCount++;
-      countQuery += ` AND transmission ILIKE $${countParamCount}`;
-      countValues.push(`%${transmission}%`);
-    }
-
-    if (body_type) {
-      countParamCount++;
-      countQuery += ` AND body_type ILIKE $${countParamCount}`;
-      countValues.push(`%${body_type}%`);
-    }
-
-    if (search) {
-      countParamCount++;
-      countQuery += ` AND (brand ILIKE $${countParamCount} OR model ILIKE $${countParamCount} OR variant ILIKE $${countParamCount})`;
-      countValues.push(`%${search}%`);
-    }
-
-    const countResult = await pool.query(countQuery, countValues);
-    const total = parseInt(countResult.rows[0].count);
-
-    return {
-      cars,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / limit),
+// Define Car Schema
+const carSchema = new mongoose.Schema(
+  {
+    brand: {
+      type: String,
+      required: [true, "Brand is required"],
+      trim: true,
+      maxlength: [100, "Brand cannot exceed 100 characters"],
+    },
+    model: {
+      type: String,
+      required: [true, "Model is required"],
+      trim: true,
+      maxlength: [100, "Model cannot exceed 100 characters"],
+    },
+    variant: {
+      type: String,
+      trim: true,
+      maxlength: [200, "Variant cannot exceed 200 characters"],
+    },
+    year: {
+      type: Number,
+      required: [true, "Year is required"],
+      min: [1900, "Year must be after 1900"],
+      max: [new Date().getFullYear() + 1, "Year cannot be in the future"],
+    },
+    price: {
+      type: Number,
+      required: [true, "Price is required"],
+      min: [0, "Price must be positive"],
+    },
+    fuel_type: {
+      type: String,
+      trim: true,
+      maxlength: [50, "Fuel type cannot exceed 50 characters"],
+    },
+    transmission: {
+      type: String,
+      trim: true,
+      maxlength: [50, "Transmission cannot exceed 50 characters"],
+    },
+    mileage: {
+      type: String,
+      trim: true,
+      maxlength: [50, "Mileage cannot exceed 50 characters"],
+    },
+    engine_cc: {
+      type: String,
+      trim: true,
+      maxlength: [50, "Engine CC cannot exceed 50 characters"],
+    },
+    power_bhp: {
+      type: String,
+      trim: true,
+      maxlength: [50, "Power BHP cannot exceed 50 characters"],
+    },
+    seats: {
+      type: Number,
+      min: [1, "Seats must be at least 1"],
+      max: [50, "Seats cannot exceed 50"],
+    },
+    body_type: {
+      type: String,
+      trim: true,
+      maxlength: [50, "Body type cannot exceed 50 characters"],
+    },
+    image_url: {
+      type: String,
+      trim: true,
+      maxlength: [500, "Image URL cannot exceed 500 characters"],
+    },
+    description: {
+      type: String,
+      trim: true,
+    },
+  },
+  {
+    timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+    toJSON: {
+      transform: function (doc, ret) {
+        ret.id = ret._id;
+        delete ret._id;
+        delete ret.__v;
+        return ret;
       },
-    };
+    },
+  }
+);
+
+// Indexes for performance
+carSchema.index({ brand: 1 });
+carSchema.index({ price: 1 });
+carSchema.index({ year: 1 });
+carSchema.index({ fuel_type: 1 });
+carSchema.index({ transmission: 1 });
+carSchema.index({ body_type: 1 });
+carSchema.index({ brand: "text", model: "text", variant: "text" }); // Text search index
+
+// Static methods
+carSchema.statics.create = async function (carData) {
+  const car = new this(carData);
+  return await car.save();
+};
+
+carSchema.statics.findAll = async function (options = {}) {
+  const {
+    page = 1,
+    limit = 10,
+    brand,
+    price_min,
+    price_max,
+    year,
+    fuel_type,
+    transmission,
+    body_type,
+    search,
+    sort_by = "created_at",
+    sort_order = "DESC",
+  } = options;
+
+  // Build filter object
+  const filter = {};
+
+  if (brand) {
+    filter.brand = { $regex: brand, $options: "i" };
   }
 
-  // Get car by ID
-  static async findById(id) {
-    const query = "SELECT * FROM cars WHERE id = $1";
-    const result = await pool.query(query, [id]);
-
-    if (result.rows.length === 0) {
-      return null;
-    }
-
-    return new Car(result.rows[0]);
+  if (price_min || price_max) {
+    filter.price = {};
+    if (price_min) filter.price.$gte = price_min;
+    if (price_max) filter.price.$lte = price_max;
   }
 
-  // Get unique brands
-  static async getBrands() {
-    const query = "SELECT DISTINCT brand FROM cars ORDER BY brand";
-    const result = await pool.query(query);
-    return result.rows.map((row) => row.brand);
+  if (year) {
+    filter.year = year;
   }
 
-  // Get filter options
-  static async getFilterOptions() {
-    const queries = {
-      brands: "SELECT DISTINCT brand FROM cars ORDER BY brand",
-      fuelTypes:
-        "SELECT DISTINCT fuel_type FROM cars WHERE fuel_type IS NOT NULL ORDER BY fuel_type",
-      transmissions:
-        "SELECT DISTINCT transmission FROM cars WHERE transmission IS NOT NULL ORDER BY transmission",
-      bodyTypes:
-        "SELECT DISTINCT body_type FROM cars WHERE body_type IS NOT NULL ORDER BY body_type",
-      years: "SELECT DISTINCT year FROM cars ORDER BY year DESC",
-      priceRange:
-        "SELECT MIN(price) as min_price, MAX(price) as max_price FROM cars",
-    };
-
-    const results = {};
-
-    // Column name mapping
-    const columnMapping = {
-      brands: "brand",
-      fuelTypes: "fuel_type",
-      transmissions: "transmission",
-      bodyTypes: "body_type",
-      years: "year",
-    };
-
-    for (const [key, query] of Object.entries(queries)) {
-      const result = await pool.query(query);
-      if (key === "priceRange") {
-        results[key] = result.rows[0];
-      } else {
-        const columnName = columnMapping[key];
-        results[key] = result.rows.map((row) => row[columnName]);
-      }
-    }
-
-    return results;
+  if (fuel_type) {
+    filter.fuel_type = { $regex: fuel_type, $options: "i" };
   }
 
-  // Bulk insert cars
-  static async bulkInsert(carsData) {
-    const query = `
-      INSERT INTO cars (
-        brand, model, variant, year, price, fuel_type, transmission,
-        mileage, engine_cc, power_bhp, seats, body_type, image_url, description
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-    `;
-
-    const client = await pool.connect();
-    try {
-      await client.query("BEGIN");
-
-      for (const carData of carsData) {
-        const values = [
-          carData.brand,
-          carData.model,
-          carData.variant,
-          carData.year,
-          carData.price,
-          carData.fuel_type,
-          carData.transmission,
-          carData.mileage,
-          carData.engine_cc,
-          carData.power_bhp,
-          carData.seats,
-          carData.body_type,
-          carData.image_url,
-          carData.description,
-        ];
-        await client.query(query, values);
-      }
-
-      await client.query("COMMIT");
-      console.log(`Successfully inserted ${carsData.length} cars`);
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
-    } finally {
-      client.release();
-    }
+  if (transmission) {
+    filter.transmission = { $regex: transmission, $options: "i" };
   }
-}
+
+  if (body_type) {
+    filter.body_type = { $regex: body_type, $options: "i" };
+  }
+
+  if (search) {
+    filter.$or = [
+      { brand: { $regex: search, $options: "i" } },
+      { model: { $regex: search, $options: "i" } },
+      { variant: { $regex: search, $options: "i" } },
+    ];
+  }
+
+  // Build sort object
+  const validSortFields = ["price", "year", "brand", "model", "created_at"];
+  const sortField = validSortFields.includes(sort_by) ? sort_by : "created_at";
+  const sortDirection = sort_order.toUpperCase() === "ASC" ? 1 : -1;
+  const sort = { [sortField]: sortDirection };
+
+  // Calculate pagination
+  const skip = (page - 1) * limit;
+
+  // Execute queries
+  const [cars, total] = await Promise.all([
+    this.find(filter).sort(sort).skip(skip).limit(limit).lean(),
+    this.countDocuments(filter),
+  ]);
+
+  return {
+    cars,
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total,
+      pages: Math.ceil(total / limit),
+    },
+  };
+};
+
+carSchema.statics.findById = async function (id) {
+  return await this.findOne({ _id: id });
+};
+
+carSchema.statics.getBrands = async function () {
+  const brands = await this.distinct("brand");
+  return brands.sort();
+};
+
+carSchema.statics.getFilterOptions = async function () {
+  const [brands, fuelTypes, transmissions, bodyTypes, years, priceRange] =
+    await Promise.all([
+      this.distinct("brand"),
+      this.distinct("fuel_type", { fuel_type: { $ne: null } }),
+      this.distinct("transmission", { transmission: { $ne: null } }),
+      this.distinct("body_type", { body_type: { $ne: null } }),
+      this.distinct("year"),
+      this.aggregate([
+        {
+          $group: {
+            _id: null,
+            min_price: { $min: "$price" },
+            max_price: { $max: "$price" },
+          },
+        },
+      ]),
+    ]);
+
+  return {
+    brands: brands.sort(),
+    fuelTypes: fuelTypes.sort(),
+    transmissions: transmissions.sort(),
+    bodyTypes: bodyTypes.sort(),
+    years: years.sort((a, b) => b - a), // Descending order
+    priceRange: priceRange[0] || { min_price: 0, max_price: 0 },
+  };
+};
+
+carSchema.statics.bulkInsert = async function (carsData) {
+  try {
+    const result = await this.insertMany(carsData, { ordered: false });
+    console.log(`Successfully inserted ${result.length} cars`);
+    return result;
+  } catch (error) {
+    console.error("Bulk insert error:", error);
+    throw error;
+  }
+};
+
+const Car = mongoose.model("Car", carSchema);
 
 module.exports = Car;

@@ -6,12 +6,9 @@ const config = {
   nodeEnv: process.env.NODE_ENV || "development",
 
   database: {
-    url: process.env.DATABASE_URL,
-    host: process.env.DB_HOST || "localhost",
-    port: process.env.DB_PORT || 5432,
+    url: process.env.DATABASE_URL || process.env.MONGO_URI,
+    mongoURI: process.env.MONGO_URI || process.env.DATABASE_URL,
     name: process.env.DB_NAME || "autoassist_db",
-    user: process.env.DB_USER || "username",
-    password: process.env.DB_PASSWORD || "password",
   },
 
   jwt: {
@@ -20,7 +17,12 @@ const config = {
   },
 
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: [
+      process.env.FRONTEND_URL || "http://localhost:3000",
+      "https://autoassist-frontend.vercel.app",
+      "https://*.vercel.app",
+      /\.vercel\.app$/,
+    ],
   },
 
   rateLimit: {
