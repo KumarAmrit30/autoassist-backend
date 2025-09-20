@@ -19,16 +19,13 @@ const config = {
   cors: {
     origin: [
       process.env.FRONTEND_URL || "http://localhost:3000",
-      // Development URLs
       "http://localhost:8080",
       "http://localhost:8081",
       "http://localhost:5173", // Vite default port
-      // Production URLs from environment
-      process.env.FRONTEND_URL,
-      // Fallback Vercel patterns
+      "https://autoassist-frontend.vercel.app",
       "https://*.vercel.app",
       /\.vercel\.app$/,
-    ].filter(Boolean), // Remove undefined values
+    ],
   },
 
   rateLimit: {
